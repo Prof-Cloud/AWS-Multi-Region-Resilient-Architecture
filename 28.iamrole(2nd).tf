@@ -56,6 +56,28 @@ resource "aws_iam_role_policy" "read_db_secret_2nd" {
 #Database Secret data sources
 # We use 'provider = aws' to tell Terraform to look in Virginia.
 data "aws_secretsmanager_secret" "db_secret_2nd" {
-  provider = aws 
-  arn      = aws_secretsmanager_secret.db_secret.arn 
+  provider = aws
+  arn      = aws_secretsmanager_secret.db_secret.arn
+}
+
+
+#Permission for London EC2 to write to its log bucket
+resource "aws_iam_role_policy" "s3_log_write_2nd" {
+  provider = aws.London
+  name     = "allow-s3-log-writing-2nd"
+  role     = aws_iam_role.ec2_role_2nd.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action   = ["s3:PutObject", "s3:GetBucketAcl"]
+        Effect   = "Allow"
+        Resource = [
+          aws_s3_bucket.log_bucket2.arn,
+          "${aws_s3_bucket.log_bucket2.arn}/*"
+        ]
+      }
+    ]
+  })
 }
