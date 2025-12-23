@@ -58,3 +58,20 @@ resource "aws_vpc_security_group_ingress_rule" "db_ingress" {
   ip_protocol = "tcp"
   to_port     = 3306
 }
+
+#Outbound Database
+resource "aws_vpc_security_group_egress_rule" "db_egress" {
+  security_group_id = aws_security_group.db_sg.id
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "-1"
+}
+
+#SG - S3 VPC ENdpoints
+# Allow Linux to send logs to S3 (Primary)
+resource "aws_vpc_security_group_egress_rule" "allow_s3_logs" {
+  security_group_id = aws_security_group.Linux_Server.id
+  prefix_list_id    = aws_vpc_endpoint.s3_primary.prefix_list_id
+  ip_protocol       = "tcp"
+  from_port         = 443
+  to_port           = 443
+}

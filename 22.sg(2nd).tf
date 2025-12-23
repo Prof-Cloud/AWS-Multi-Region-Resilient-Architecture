@@ -67,3 +67,23 @@ resource "aws_vpc_security_group_ingress_rule" "db_ingress_2nd" {
   ip_protocol = "tcp"
   to_port     = 3306
 }
+
+#Outbound Database
+# Outbound for Secondary DB
+resource "aws_vpc_security_group_egress_rule" "db_egress_2nd" {
+  provider          = aws.London
+  security_group_id = aws_security_group.db_sg_2nd.id
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "-1"
+}
+
+#SG - S3 VPC ENdpoints
+# Allow Linux to send logs to S3 (Secondary)
+resource "aws_vpc_security_group_egress_rule" "allow_s3_logs_2nd" {
+  provider          = aws.London
+  security_group_id = aws_security_group.Linux_Server_2nd.id
+  prefix_list_id    = aws_vpc_endpoint.s3_secondary.prefix_list_id
+  ip_protocol       = "tcp"
+  from_port         = 443
+  to_port           = 443
+}
