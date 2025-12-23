@@ -52,3 +52,23 @@ resource "aws_iam_role_policy" "read_db_secret" {
     ]
   })
 }
+
+# Permission for Virginia EC2 to write to its log bucket
+resource "aws_iam_role_policy" "s3_log_write" {
+  name = "allow-s3-log-writing"
+  role = aws_iam_role.ec2_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action   = ["s3:PutObject", "s3:GetBucketAcl"]
+        Effect   = "Allow"
+        Resource = [
+          aws_s3_bucket.log_bucket.arn,
+          "${aws_s3_bucket.log_bucket.arn}/*"
+        ]
+      }
+    ]
+  })
+}
