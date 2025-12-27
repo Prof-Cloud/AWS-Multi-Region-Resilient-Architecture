@@ -1,4 +1,5 @@
-# Define the Global Cluster Hub
+# Global Cluster
+#this is Global Aurora 
 resource "aws_rds_global_cluster" "global_db" {
   global_cluster_identifier = "vanish-global-db"
   engine                    = "aurora-mysql"
@@ -7,22 +8,29 @@ resource "aws_rds_global_cluster" "global_db" {
   storage_encrypted         = true
 }
 
-# Primary Cluster (Virginia)
+# Primary Aurora Cluster (Virginia)
+#This is writer DB
 resource "aws_rds_cluster" "primary_cluster" {
   provider                  = aws # Default us-east-1
   cluster_identifier        = "vanish-primary-cluster"
   global_cluster_identifier = aws_rds_global_cluster.global_db.id
-  engine                    = aws_rds_global_cluster.global_db.engine
-  engine_version            = aws_rds_global_cluster.global_db.engine_version
 
+  #Required for initaulize schema
+  database_name = "vanish_db"
+
+  #Engine configuration inherited from global cluster
+  engine         = aws_rds_global_cluster.global_db.engine
+  engine_version = aws_rds_global_cluster.global_db.engine_version
+
+  #Networking
   db_subnet_group_name   = aws_db_subnet_group.aurora.name
   vpc_security_group_ids = [aws_security_group.db_sg.id]
 
-# Credentials pulled from Secrets Manager
+  # Credentials pulled from Secrets Manager
   master_password = aws_secretsmanager_secret_version.db_password_val.secret_string
   master_username = "admin"
 
-# REQUIRED FOR DESTROY: Prevents the "FinalSnapshotIdentifier is required" error.
+  # Reqquired for destroy, prevents the "FinalSnapshotIdentifier is required" error.
   # Set to 'false' in production to ensure you have a backup before deletion.
   skip_final_snapshot = true
 
@@ -30,38 +38,55 @@ resource "aws_rds_cluster" "primary_cluster" {
   depends_on = [aws_rds_global_cluster.global_db]
 }
 
-# Secondary Cluster (London)
+# Secondary Aurora Cluster (London)
+#Read-only cluster until failover
 resource "aws_rds_cluster" "secondary_cluster" {
   provider                  = aws.London
   cluster_identifier        = "vanish-secondary-cluster"
   global_cluster_identifier = aws_rds_global_cluster.global_db.id
-  engine                    = aws_rds_global_cluster.global_db.engine
-  engine_version            = aws_rds_global_cluster.global_db.engine_version
 
-# Credentials pulled from Secrets Manager
+
+  #Even though it's a global cluster, Terraform needs these defined
+  # Reference the global_db values to ensure they stay in sync
+  engine         = aws_rds_global_cluster.global_db.engine
+  engine_version = aws_rds_global_cluster.global_db.engine_version
+
+  #Dont add database_name to the secondary_cluster. secondary_cluster in a global database are read-only replicas
+  #They automatically receive the db schema from the primary
+
+  #Networking
   db_subnet_group_name   = aws_db_subnet_group.aurora_2nd.name # You'll need this in London VPC
   vpc_security_group_ids = [aws_security_group.db_sg_2nd.id]
 
-# REQUIRED FOR DESTROY: Prevents the "FinalSnapshotIdentifier is required" error.
+  # REQUIRED FOR DESTROY: Prevents the "FinalSnapshotIdentifier is required" error.
   # Set to 'false' in production to ensure you have a backup before deletion.
   skip_final_snapshot = true
 
- #Moved from instance to cluste
-  storage_encrypted      = true
-  kms_key_id             = aws_kms_key.london_rds_key.arn
+  storage_encrypted = true
+  kms_key_id        = aws_kms_key.london_rds_key.arn
 
-  depends_on = [aws_rds_cluster.primary_cluster]
+  #Explicitly wait for the primary instances to be fully live
+  depends_on = [
+    aws_rds_cluster.primary_cluster,
+    aws_rds_global_cluster.global_db
+  ]
 }
-
-# 4. Instances for both regions
+/*
+#Primary Region
+##Writer and reader nodes
 resource "aws_rds_cluster_instance" "primary_instances" {
   count              = 2
   identifier         = "vanish-db-primary-${count.index}"
   cluster_identifier = aws_rds_cluster.primary_cluster.id
   instance_class     = "db.r5.large"
   engine             = aws_rds_cluster.primary_cluster.engine
+
+  publicly_accessible = false
 }
 
+*/
+#Secondary Region
+#Reader nodes
 resource "aws_rds_cluster_instance" "secondary_instances" {
   provider           = aws.London
   count              = 1 # Keep 1 instance in London to save cost until failover
@@ -70,16 +95,24 @@ resource "aws_rds_cluster_instance" "secondary_instances" {
   instance_class     = "db.r5.large"
   engine             = aws_rds_cluster.secondary_cluster.engine
 
-  
+  publicly_accessible = false
+
+  #Explicitly wait for London cluster to be ready
   depends_on = [aws_rds_cluster.primary_cluster]
 }
 
+
 #Database Subnet
+#Isolate DBs in private subnets
+
 #Primary Regions
 resource "aws_db_subnet_group" "aurora" {
   name       = "aurora-subnet-group"
   subnet_ids = aws_subnet.db_subnet[*].id
-  tags       = { Name = "Main DB Subnet Group" }
+
+  tags = {
+    Name = "Main DB Subnet Group"
+  }
 }
 
 #Secondary Regions
@@ -87,7 +120,10 @@ resource "aws_db_subnet_group" "aurora_2nd" {
   provider   = aws.London
   name       = "aurora-subnet-group-2nd"
   subnet_ids = aws_subnet.db_subnet_2nd[*].id
-  tags       = { Name = "Secondary DB Subnet Group" }
+
+  tags = {
+    Name = "Secondary DB Subnet Group"
+  }
 }
 
 # Create a KMS key in London
