@@ -4,7 +4,7 @@ resource "aws_autoscaling_group" "app_asg_2nd" {
   provider            = aws.London
   name_prefix         = "app_asg_2nd"
   min_size            = 1
-  max_size            = 3 #Kept smaller for standby region
+  max_size            = 3 #Kept smaller for standby
   desired_capacity    = 2
   vpc_zone_identifier = aws_subnet.private_subnet_2nd[*].id
 
@@ -13,7 +13,7 @@ resource "aws_autoscaling_group" "app_asg_2nd" {
   health_check_type         = "ELB"
   health_check_grace_period = 300
   force_delete              = true
-  target_group_arns         = [aws_lb_target_group.app_tg_2nd.arn]
+  target_group_arns         = [aws_lb_target_group.tg_london.arn]
 
   launch_template {
     id      = aws_launch_template.app_template_2nd.id
@@ -22,8 +22,7 @@ resource "aws_autoscaling_group" "app_asg_2nd" {
 
   enabled_metrics = ["GroupMinSize", "GroupMaxSize", "GroupDesiredCapacity", "GroupInServiceInstances", "GroupTotalInstances"]
 
-  # Instance protection for launching
-  #Secondary Region
+  # Lifecycle hook for instance launching
   initial_lifecycle_hook {
     name                  = "instance-protection-launch"
     lifecycle_transition  = "autoscaling:EC2_INSTANCE_LAUNCHING"

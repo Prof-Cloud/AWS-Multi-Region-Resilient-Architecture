@@ -11,7 +11,17 @@ resource "aws_launch_template" "app_template_2nd" {
 
   vpc_security_group_ids = [aws_security_group.Linux_Server_2nd.id]
 
-  user_data = filebase64("userdata.sh")
+  user_data = base64encode(templatefile("userdata.sh", {
+
+    #Cluster endpoint need to be global cluster endpoint
+    #Because primary cluster only works for Virginia
+    #If Virginia dies, the London ec2 will try to connect to dead DB
+    db_endpoint = aws_rds_global_cluster.global_db.endpoint
+
+    db_name     = aws_rds_global_cluster.global_db.database_name
+    db_user     = aws_rds_cluster.primary_cluster.master_username
+    db_password = aws_secretsmanager_secret_version.db_password_val.secret_string
+  }))
 
 
 

@@ -1,4 +1,43 @@
-#Securitty Group For Linux Server 
+#ALB Security Group
+resource "aws_security_group" "alb_sg_2nd" {
+  provider    = aws.London
+  name        = "alb-sg"
+  description = "Security group for ALB Secondary Region"
+  vpc_id      = aws_vpc.secondary_vpc.id
+
+  tags = {
+    Name = "ALB Security Group Secondary Group"
+  }
+}
+
+#Aloow HTTP from the Internet 
+resource "aws_vpc_security_group_ingress_rule" "alb_http_2nd" {
+  provider          = aws.London
+  security_group_id = aws_security_group.alb_sg_2nd.id
+  cidr_ipv4         = "0.0.0.0/0"
+  from_port         = 80
+  ip_protocol       = "tcp"
+  to_port           = 80
+}
+
+resource "aws_vpc_security_group_ingress_rule" "alb_https_2nd" {
+  provider          = aws.London
+  security_group_id = aws_security_group.alb_sg_2nd.id
+  cidr_ipv4         = "0.0.0.0/0"
+  from_port         = 443
+  ip_protocol       = "tcp"
+  to_port           = 443
+}
+
+#ALB Outbound Rules 
+resource "aws_vpc_security_group_egress_rule" "alb_outbound_2nd" {
+  provider          = aws.London
+  security_group_id = aws_security_group.alb_sg_2nd.id
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "-1" # semantically equivalent to all ports
+}
+
+#Security Group for Linux Server
 #Secondary Region
 resource "aws_security_group" "Linux_Server_2nd" {
   provider    = aws.London
@@ -11,15 +50,15 @@ resource "aws_security_group" "Linux_Server_2nd" {
   }
 }
 
-#Inbound Rules
+#Inbound Rules Allws HTTP from ALB
 #Secondary Region
-resource "aws_vpc_security_group_ingress_rule" "Linux_Server_ipv4_2nd" {
-  provider          = aws.London
-  security_group_id = aws_security_group.Linux_Server_2nd.id
-  cidr_ipv4         = "0.0.0.0/0"
-  from_port         = 80
-  ip_protocol       = "tcp"
-  to_port           = 80
+resource "aws_vpc_security_group_ingress_rule" "ec2_from_alb_2nd" {
+  provider                     = aws.London
+  security_group_id            = aws_security_group.Linux_Server_2nd.id
+  referenced_security_group_id = aws_security_group.alb_sg_2nd.id
+  from_port                    = 80
+  ip_protocol                  = "tcp"
+  to_port                      = 80
 }
 
 resource "aws_vpc_security_group_ingress_rule" "Linux_Server_ssh_2nd" {
@@ -29,6 +68,15 @@ resource "aws_vpc_security_group_ingress_rule" "Linux_Server_ssh_2nd" {
   from_port         = 22
   ip_protocol       = "tcp"
   to_port           = 22
+}
+
+resource "aws_vpc_security_group_ingress_rule" "ALB_https_2nd_ec2" {
+  provider          = aws.London
+  security_group_id = aws_security_group.Linux_Server_2nd.id
+  cidr_ipv4         = "0.0.0.0/0"
+  from_port         = 443
+  ip_protocol       = "tcp"
+  to_port           = 443
 }
 
 #Outbound Rules
@@ -49,7 +97,7 @@ resource "aws_security_group" "db_sg_2nd" {
   vpc_id      = aws_vpc.secondary_vpc.id
 
   tags = {
-    Name = "Aurora DB SG"
+    Name = "Aurora DB SG Secondary Region"
   }
 }
 
@@ -87,3 +135,4 @@ resource "aws_vpc_security_group_egress_rule" "allow_s3_logs_2nd" {
   from_port         = 443
   to_port           = 443
 }
+
