@@ -57,7 +57,8 @@ resource "aws_lb_listener" "https_front_end_2nd" {
   certificate_arn   = aws_acm_certificate.cert_2nd.arn
 
   # Wait for validation
-  depends_on = [aws_acm_certificate_validation.cert_validation]
+  depends_on = [aws_acm_certificate_validation.cert_validation_2nd]
+
   #The default is to forward traffic to the secondary EC2 instsnces
   default_action {
     type             = "forward"
@@ -84,6 +85,6 @@ resource "aws_lb_listener" "http_redirect_2nd" {
     }
 
   }
-  depends_on = [aws_acm_certificate_validation.cert_validation]
+  depends_on = [aws_acm_certificate_validation.cert_validation_2nd]
 }
 

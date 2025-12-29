@@ -31,6 +31,7 @@ resource "aws_autoscaling_group" "app_asg_2nd" {
     notification_metadata = "{\"key\":\"value\"}"
   }
 
+#Comment out for test
   # Instance protection for terminating
   #Secondary Region
   initial_lifecycle_hook {
@@ -41,6 +42,7 @@ resource "aws_autoscaling_group" "app_asg_2nd" {
   }
 
 }
+
 
 # Auto Scaling Policy
 #Secondary Region
