@@ -33,17 +33,17 @@ resource "aws_route53_record" "cert_validation" {
 
 #Health check for primary region
 resource "aws_route53_health_check" "primary" {
-  fqdn                    = aws_lb.primary_alb.dns_name
-  port                    = 80
-  type                    = "HTTP"
-  resource_path           = "/health"
+  fqdn          = aws_lb.primary_alb.dns_name
+  port          = 443
+  type          = "HTTPS"
+  resource_path = "/health"
 
-  failure_threshold       = 2 
-  request_interval        = 10
+  failure_threshold = 2
+  request_interval  = 10
 
   # This ensures the health check is monitored from multiple global locations
-  measure_latency   = true
-  
+  measure_latency = true
+
   cloudwatch_alarm_region = "us-east-1"
   cloudwatch_alarm_name   = "primary-health-check"
   depends_on              = [aws_lb.primary_alb]
@@ -70,7 +70,14 @@ resource "aws_route53_record" "primary" {
   alias {
     name                   = aws_lb.primary_alb.dns_name
     zone_id                = aws_lb.primary_alb.zone_id
-    evaluate_target_health = true # Key for automatic detection
+    evaluate_target_health = false #Want Route53 to listen to the 503 error not the ALB status
+
+    #Wrong
+    #Because when I delete the ec2 in virginia, the tg is emply, so the ALB will return a 503 error
+    #The ALB infrastrue is still healthly because "evaluate_target_health = true" is on
+    #Route 53 talking to ALB, ALB is say Yes, I'am running
+    #evaluate_target_health = true
+
   }
 }
 
@@ -97,18 +104,12 @@ resource "aws_route53_record" "secondary" {
 resource "aws_route53_record" "www" {
   zone_id = data.aws_route53_zone.hosted_zone.zone_id
   name    = "www.${var.domain_name}"
-  type - "CNAME"
-  ttl = "60"
-  records = [var.domain]
-
-
-  #This is why the falilover policy isnt working. This is an simple aliis that points directly to Virginia LB.
-  #Change the www record to a Cname that point to your domain
-  #type    = "A"
+  type    = "A" # Change from CNAME to A
 
   alias {
-    name                   = aws_lb.primary_alb.dns_name
-    zone_id                = aws_lb.primary_alb.zone_id
+    # This points 'www' to the 'primary' record logic above
+    name                   = aws_route53_record.primary.name
+    zone_id                = aws_route53_record.primary.zone_id
     evaluate_target_health = true
   }
 }
