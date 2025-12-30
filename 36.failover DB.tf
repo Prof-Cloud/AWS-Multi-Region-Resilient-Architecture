@@ -56,7 +56,12 @@ resource "aws_iam_role_policy" "lambda_rds_policy" {
     Version = "2012-10-17"
     Statement = [{
       Effect   = "Allow"
-      Action   = ["rds:FailoverGlobalCluster", "rds:DescribeDBClusters"]
+      # Added "rds:DescribeGlobalClusters" below
+      Action   = [
+        "rds:FailoverGlobalCluster", 
+        "rds:DescribeDBClusters", 
+        "rds:DescribeGlobalClusters" 
+      ]
       Resource = "*"
     }]
   })
