@@ -53,6 +53,20 @@ resource "aws_route53_health_check" "primary" {
   }
 }
 
+# The Health Check that Route 53 actually monitors
+resource "aws_route53_health_check" "primary_manual_failover" {
+  type                            = "CLOUDWATCH_METRIC"
+  cloudwatch_alarm_name           = "primary-health-check"
+  cloudwatch_alarm_region         = "us-east-1"
+  insufficient_data_health_status = "Healthy"
+
+  tags = {
+    Name = "Manual Failover Trigger"
+  }
+}
+
+
+
 #Creating DNS record on Route53  - Primary
 resource "aws_route53_record" "primary" {
   zone_id = data.aws_route53_zone.hosted_zone.zone_id
@@ -65,19 +79,12 @@ resource "aws_route53_record" "primary" {
     type = "PRIMARY"
   }
 
-  health_check_id = aws_route53_health_check.primary.id
+  health_check_id = aws_route53_health_check.primary_manual_failover.id
 
   alias {
     name                   = aws_lb.primary_alb.dns_name
     zone_id                = aws_lb.primary_alb.zone_id
     evaluate_target_health = false #Want Route53 to listen to the 503 error not the ALB status
-
-    #Wrong
-    #Because when I delete the ec2 in virginia, the tg is emply, so the ALB will return a 503 error
-    #The ALB infrastrue is still healthly because "evaluate_target_health = true" is on
-    #Route 53 talking to ALB, ALB is say Yes, I'am running
-    #evaluate_target_health = true
-
   }
 }
 
