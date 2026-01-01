@@ -1,4 +1,4 @@
-# CloudWatch alarm for health check
+# CloudWatch alarm for ALB Errors
 resource "aws_cloudwatch_metric_alarm" "primary_health_check" {
   alarm_name          = "primary-health-check"
   comparison_operator = "LessThanThreshold"
@@ -7,15 +7,19 @@ resource "aws_cloudwatch_metric_alarm" "primary_health_check" {
   namespace           = "AWS/Route53"
   period              = "60"
   statistic           = "Minimum"
-  threshold           = "1"
+  threshold           = "0" #Any 500 error triggers it
   alarm_description   = "This metric monitors the health check status"
   treat_missing_data  = "breaching"
 
-  dimensions = {
-    HealthCheckId = aws_route53_health_check.primary.id
+dimensions = {
+    LoadBalancer = aws_lb.primary_alb.arn_suffix
   }
 
-  alarm_actions = [aws_sns_topic.route53_failover_alerts.arn]
+  # This triggers the email AND the Lambda failover script
+  alarm_actions = [aws_sns_topic.route53_failover_alerts.arn, 
+  aws_sns_topic.db_failover_topic.arn]
+
+
   tags = {
     Name = "CloudWatch Primary Health Check"
   }
