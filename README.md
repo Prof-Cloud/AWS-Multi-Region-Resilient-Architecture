@@ -1,3 +1,3 @@
 # AWS-Multi-Region-Resilient-Architecture
 
-<img width="240" height="280" alt="image" src="https://github.com/user-attachments/assets/eb7b6195-1735-43e7-87b4-044e4b02d871" />
+<img width="2472" height="1226" alt="di" src="https://github.com/user-attachments/assets/1c06ebf3-424a-4b68-89c6-7e88d05cf185" />
