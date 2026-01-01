@@ -23,6 +23,10 @@ resource "aws_cloudwatch_metric_alarm" "database_health" {
   statistic           = "Average"
   threshold           = "1"
 
+  # Trigger alarm even if the DB is so broken it stops sending metrics
+  treat_missing_data = "breaching"
+
+
   dimensions = {
     DBClusterIdentifier = aws_rds_cluster.primary_cluster.id
   }
@@ -49,25 +53,35 @@ resource "aws_iam_role" "lambda_exec_role" {
   })
 }
 
-# Allowing Lambda to use the RDS failover tool
-resource "aws_iam_role_policy" "lambda_rds_policy" {
+# Policy DB failover and CloudWatch Logging
+resource "aws_iam_role_policy" "lambda_failover_policy" {
+  name = "lambda_failover_and_logging"
   role = aws_iam_role.lambda_exec_role.id
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Effect   = "Allow"
-      # Added "rds:DescribeGlobalClusters" below
-      Action   = [
-        "rds:FailoverGlobalCluster", 
-        "rds:DescribeDBClusters", 
-        "rds:DescribeGlobalClusters" 
-      ]
-      Resource = "*"
-    }]
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "rds:FailoverGlobalCluster",
+          "rds:DescribeDBClusters",
+          "rds:DescribeGlobalClusters"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "arn:aws:logs:*:*:*"
+      }
+    ]
   })
 }
-
-#Lambda
+#Lambda Code
 #Zips up python code into a zip file
 data "archive_file" "lambda_zip" {
   type        = "zip"
@@ -75,13 +89,16 @@ data "archive_file" "lambda_zip" {
   output_path = "lambda_function_payload.zip"
 }
 
-#Lambda performs the failover
+#Lambda Configuration
 resource "aws_lambda_function" "failover_logic" {
   filename      = data.archive_file.lambda_zip.output_path
   function_name = "aurora_failover_guard"
   role          = aws_iam_role.lambda_exec_role.arn
   handler       = "failover_lambda.lambda_handler"
   runtime       = "python3.9"
+
+  #Failover can take time; 15 mins is the max allowed
+  timeout = 900
 
   # Giving the Lambda the DB names to watch
   environment {
