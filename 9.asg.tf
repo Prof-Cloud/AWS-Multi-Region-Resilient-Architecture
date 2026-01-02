@@ -1,9 +1,9 @@
 #Creates Auto Scaling 
 resource "aws_autoscaling_group" "app_asg" {
   name_prefix         = "app_asg"
-  min_size            = 1
+  min_size            = 3
   max_size            = 9
-  desired_capacity    = 2
+  desired_capacity    = 6
   vpc_zone_identifier = aws_subnet.private_subnet[*].id
 
   #Health check
