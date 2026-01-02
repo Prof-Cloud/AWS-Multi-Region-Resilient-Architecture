@@ -6,6 +6,8 @@ resource "aws_rds_global_cluster" "global_db" {
   engine_version            = "8.0.mysql_aurora.3.04.0"
   database_name             = "vanish_db"
   storage_encrypted         = true
+
+  force_destroy = true
 }
 
 # Primary Aurora Cluster (Virginia)
@@ -45,7 +47,6 @@ resource "aws_rds_cluster" "secondary_cluster" {
   cluster_identifier        = "vanish-secondary-cluster"
   global_cluster_identifier = aws_rds_global_cluster.global_db.id
 
-
   #Even though it's a global cluster, Terraform needs these defined
   # Reference the global_db values to ensure they stay in sync
   engine         = aws_rds_global_cluster.global_db.engine
@@ -67,15 +68,15 @@ resource "aws_rds_cluster" "secondary_cluster" {
 
   #Explicitly wait for the primary instances to be fully live
   depends_on = [
-    aws_rds_cluster.primary_cluster,
+    aws_rds_cluster_instance.primary_instances,
     aws_rds_global_cluster.global_db
   ]
 }
-/*
+
 #Primary Region
 ##Writer and reader nodes
 resource "aws_rds_cluster_instance" "primary_instances" {
-  count              = 2
+  count              = 1 #increase DB in an production environment
   identifier         = "vanish-db-primary-${count.index}"
   cluster_identifier = aws_rds_cluster.primary_cluster.id
   instance_class     = "db.r5.large"
@@ -84,7 +85,7 @@ resource "aws_rds_cluster_instance" "primary_instances" {
   publicly_accessible = false
 }
 
-*/
+
 #Secondary Region
 #Reader nodes
 resource "aws_rds_cluster_instance" "secondary_instances" {

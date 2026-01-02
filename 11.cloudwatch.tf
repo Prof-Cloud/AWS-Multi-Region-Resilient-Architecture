@@ -11,13 +11,12 @@ resource "aws_cloudwatch_metric_alarm" "primary_health_check" {
   alarm_description   = "This metric monitors the health check status"
   treat_missing_data  = "breaching"
 
-dimensions = {
-    LoadBalancer = aws_lb.primary_alb.arn_suffix
+  dimensions = {
+    HealthCheckId = aws_route53_health_check.primary.id
   }
 
   # This triggers the email AND the Lambda failover script
-  alarm_actions = [aws_sns_topic.route53_failover_alerts.arn, 
-  aws_sns_topic.db_failover_topic.arn]
+  alarm_actions = [aws_sns_topic.route53_failover_alerts.arn]
 
 
   tags = {

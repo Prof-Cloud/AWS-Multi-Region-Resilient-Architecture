@@ -1,4 +1,5 @@
 #Allows EC2 to assume this role
+#This role will be assumed by ec2 in Primary Region
 resource "aws_iam_role" "ec2_role" {
   name = "ec2-cloudwatch-logs-role"
 
@@ -19,12 +20,14 @@ resource "aws_iam_role" "ec2_role" {
 }
 
 #Attach the Managed Policy for Cloudwatch Logs
+#Allows ec2 to send metrics and logs to Cloudwatch
 resource "aws_iam_role_policy_attachment" "cloudwatch_logs" {
   role       = aws_iam_role.ec2_role.name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
 }
 
-#Create the Instance Profile  (attach to EC2)
+#Create the Instance Profile  
+#Attach IAM role to ec2 for runtume permissions
 resource "aws_iam_instance_profile" "ec2_profile" {
   name = "ec2-cloudwatch-instance-profile"
   role = aws_iam_role.ec2_role.name
@@ -32,11 +35,13 @@ resource "aws_iam_instance_profile" "ec2_profile" {
 
 
 #DB
+
 #Get the secret details automatically created by Secret Manager
 data "aws_secretsmanager_secret" "db_secret" {
   arn = aws_secretsmanager_secret.db_secret.arn
 }
 
+#IAM policy to allow ec2 to read DB secrets
 resource "aws_iam_role_policy" "read_db_secret" {
   name = "allow-read-db-secret"
   role = aws_iam_role.ec2_role.id # Link to your existing IAM role
@@ -53,7 +58,8 @@ resource "aws_iam_role_policy" "read_db_secret" {
   })
 }
 
-# Permission for Virginia EC2 to write to its log bucket
+#IAM policy for S3 log access
+#allow ec2 to write logs to its designed S3 bucket
 resource "aws_iam_role_policy" "s3_log_write" {
   name = "allow-s3-log-writing"
   role = aws_iam_role.ec2_role.id
@@ -62,8 +68,8 @@ resource "aws_iam_role_policy" "s3_log_write" {
     Version = "2012-10-17"
     Statement = [
       {
-        Action   = ["s3:PutObject", "s3:GetBucketAcl"]
-        Effect   = "Allow"
+        Action = ["s3:PutObject", "s3:GetBucketAcl"]
+        Effect = "Allow"
         Resource = [
           aws_s3_bucket.log_bucket.arn,
           "${aws_s3_bucket.log_bucket.arn}/*"

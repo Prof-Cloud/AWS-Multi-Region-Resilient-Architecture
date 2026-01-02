@@ -7,6 +7,6 @@ resource "aws_vpc" "secondary_vpc" {
   provider = aws.London
 
   tags = {
-    Name = "Primary Region VPC"
+    Name = "Secondary Region VPC"
   }
 }
