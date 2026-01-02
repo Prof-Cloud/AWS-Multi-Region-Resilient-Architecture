@@ -11,7 +11,12 @@ resource "aws_secretsmanager_secret" "db_secret" {
   description = "Master password for Aurora Global Database"
 
   #Prevents "scheduled for deletion" lock in the future
-  recovery_window_in_days = 0 
+  recovery_window_in_days = 0
+
+  #Replicate the password to London automatically
+  replica {
+    region = "eu-west-2"
+  }
 }
 
 # Store the random password in the Secret

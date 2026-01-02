@@ -1,8 +1,8 @@
 #Attach the Policy to the Log Bucket
 #Secondary Region
 resource "aws_s3_bucket_policy" "allow_logs_2nd" {
-  provider = aws.London
-  bucket   = aws_s3_bucket.log_bucket2.id
+  provider   = aws.London
+  bucket     = aws_s3_bucket.log_bucket2.id
   depends_on = [time_sleep.wait_30_seconds] #Forced pause
 
   policy = jsonencode({
@@ -48,6 +48,6 @@ data "aws_caller_identity" "current" {}
 
 # Add this to your 30.s3(2nd).tf
 resource "time_sleep" "wait_30_seconds" {
-  depends_on = [aws_s3_bucket.log_bucket2]
+  depends_on      = [aws_s3_bucket.log_bucket2]
   create_duration = "30s"
 }

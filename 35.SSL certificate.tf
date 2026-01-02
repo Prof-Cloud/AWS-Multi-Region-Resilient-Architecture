@@ -23,14 +23,18 @@ resource "aws_acm_certificate_validation" "cert_validation" {
   # Ensure CNAMEs exist first
   depends_on = [aws_route53_record.cert_validation]
 
-  
-} 
+
+}
 
 #ACM certificate for London 
 resource "aws_acm_certificate" "cert_2nd" {
   provider          = aws.London
   domain_name       = var.domain_name
   validation_method = "DNS"
+
+  tags = {
+    Name = "SSL certificate London"
+  }
 }
 
 
@@ -41,5 +45,5 @@ resource "aws_acm_certificate_validation" "cert_validation_2nd" {
   validation_record_fqdns = [for record in aws_route53_record.cert_validation_2nd : record.fqdn]
 
   # Ensure CNAMEs exist first
-  depends_on = [aws_route53_record.cert_validation]
+  depends_on = [aws_route53_record.cert_validation_2nd]
 }
