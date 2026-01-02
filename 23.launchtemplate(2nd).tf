@@ -11,12 +11,6 @@ resource "aws_launch_template" "app_template_2nd" {
 
   vpc_security_group_ids = [aws_security_group.Linux_Server_2nd.id]
 
-
-  iam_instance_profile {
-    name = aws_iam_instance_profile.ec2_profile_2nd.name
-  }
-
-
   user_data = base64encode(templatefile("userdata_london.sh", {
 
     db_endpoint = aws_rds_cluster.secondary_cluster.endpoint
@@ -27,6 +21,12 @@ resource "aws_launch_template" "app_template_2nd" {
 
   lifecycle {
     create_before_destroy = true
+  }
+
+
+  #Attach Instance Profile
+  iam_instance_profile {
+    name = aws_iam_instance_profile.ec2_profile_2nd.name
   }
 
   tags = {

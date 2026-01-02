@@ -70,14 +70,6 @@ resource "aws_vpc_security_group_ingress_rule" "Linux_Server_ssh_2nd" {
   to_port           = 22
 }
 
-resource "aws_vpc_security_group_ingress_rule" "ALB_https_2nd_ec2" {
-  provider          = aws.London
-  security_group_id = aws_security_group.Linux_Server_2nd.id
-  cidr_ipv4         = "0.0.0.0/0"
-  from_port         = 443
-  ip_protocol       = "tcp"
-  to_port           = 443
-}
 
 #Outbound Rules
 #Secondary Region
