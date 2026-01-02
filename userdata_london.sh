@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eux
 
-# 1. Update and Install Web Stack
+# 1. Update and Install
 dnf update -y
 dnf install -y httpd php php-fpm php-mysqli
 
@@ -9,43 +9,42 @@ dnf install -y httpd php php-fpm php-mysqli
 systemctl enable --now php-fpm
 systemctl enable --now httpd
 
-# 3. Clean up default files
+# 3. CRITICAL: Remove default "It works!" page
 rm -f /var/www/html/index.html
 
-# 4. Create Health Check for the ALB
+# 4. Create Static Health Check
 echo "OK" > /var/www/html/health
 
-# 5. Fetch Metadata (IMDSv1)
-AZ=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
-REGION=$(curl -s http://169.254.169.254/latest/meta-data/placement/region)
-INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+# 5. Get Metadata
+TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+AZ=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
+REGION=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/placement/region)
+INSTANCE_ID=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/instance-id)
 
-# 6. Create the PHP Application Page
+# 6. Create Simple PHP Page
 cat <<EOF > /var/www/html/index.php
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Vanish Global App - LONDON</title>
+    <title>Vanish App - LONDON</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; padding: 20px; background: #f0f2f5; }
-        .box { background: white; border: 1px solid #d1d9e0; padding: 40px; margin: 50px auto; max-width: 650px; border-radius: 12px; box-shadow: 0 12px 30px rgba(0,0,0,0.15); }
-        .success { color: #2ecc71; font-weight: bold; font-size: 1.2em; }
-        .fail { color: #e74c3c; font-weight: bold; }
-        .meta { color: #666; font-size: 0.9em; margin-top: 25px; border-top: 1px solid #eee; padding-top: 20px; line-height: 1.6; }
-        .badge { display: inline-block; padding: 8px 16px; border-radius: 25px; font-weight: bold; font-size: 0.85em; text-transform: uppercase; margin-bottom: 20px; }
-        .region-badge { background: #34495e; color: white; }
-        .db-status-writer { background: #2ecc71; color: white; padding: 4px 10px; border-radius: 5px; }
-        .db-status-reader { background: #f39c12; color: white; padding: 4px 10px; border-radius: 5px; }
+        body { font-family: sans-serif; padding: 20px; }
+        .success { color: green; font-weight: bold; }
+        .fail { color: red; font-weight: bold; }
+        hr { border: 0; border-top: 1px solid #ccc; margin: 20px 0; }
     </style>
 </head>
 <body>
-    <div class="box">
-        <h1>GetVanish Global App</h1>
-        <div class="badge region-badge">Secondary Region: London ($REGION)</div>
-        
-        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+    <h2>Vanish Global App - LONDON</h2>
+    
+    <p><strong>Region:</strong> $REGION</p>
+    <p><strong>Availability Zone:</strong> $AZ</p>
+    <p><strong>Instance ID:</strong> $INSTANCE_ID</p>
+    
+    <hr>
+    
+    <h3>Database Status</h3>
 
-        <h3>Database Connectivity Status</h3>
 <?php
 \$host = "${db_endpoint}";
 \$user = "${db_user}";
@@ -53,40 +52,41 @@ cat <<EOF > /var/www/html/index.php
 \$dbname = "${db_name}";
 
 mysqli_report(MYSQLI_REPORT_STRICT | MYSQLI_REPORT_ERROR);
+
 try {
     \$conn = new mysqli(\$host, \$user, \$pass, \$dbname);
     
-    // Check if the DB is Read-Only
+    // Check Read/Write Status
     \$result = \$conn->query("SELECT @@global.read_only as is_read_only");
     \$row = \$result->fetch_assoc();
     \$is_read_only = \$row['is_read_only'];
 
-    echo "<p class='success'>✅ Connected to Cluster</p>";
-    
+    // 1. Green Checkmark & Success Message
+    echo "<p class='success'>✅ Database Connection Successful</p>";
+
+    // 2. Database Read/Write Status
     if (\$is_read_only == "1") {
-        echo "<p>Current State: <span class='db-status-reader'>[ BRACKET READ ONLY ]</span></p>";
-        echo "<p style='font-size: 0.85em; color: #7f8c8d;'>Status: Waiting for promotion in failover event...</p>";
+        echo "<p><strong>DATABASE - READ</strong></p>";
     } else {
-        echo "<p>Current State: <span class='db-status-writer'>[ WRITE DATABASE ACTIVE ]</span></p>";
-        echo "<p style='font-size: 0.85em; color: #27ae60;'>Status: Success! This region is now the Master Writer.</p>";
+        echo "<p><strong>DATABASE - WRITE</strong></p>";
     }
 
+    // 3. Database ID (Host)
+    echo "<p>Database ID: " . \$host . "</p>";
+
     \$conn->close();
+
 } catch (Exception \$e) {
+    // Failure Message
     echo "<p class='fail'>❌ Database Connection Failed</p>";
-    echo "<p style='font-size: 0.8em; color: #999;'>Error: " . \$e->getMessage() . "</p>";
+    echo "<p>Error: " . \$e->getMessage() . "</p>";
 }
 ?>
-        <div class="meta">
-            <p><strong>Zone:</strong> $AZ &bull; <strong>Instance:</strong> $INSTANCE_ID</p>
-            <p style="font-size: 0.8em; color: #999;">Endpoint: <code>" . \$host . "</code></p>
-        </div>
-    </div>
 </body>
 </html>
 EOF
 
-# 7. Final Permissions and Service Refresh
+# 7. Permissions and Restart
 chown -R apache:apache /var/www/html
 chmod 644 /var/www/html/health /var/www/html/index.php
 systemctl restart php-fpm httpd
