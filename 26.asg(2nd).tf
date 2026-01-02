@@ -8,6 +8,7 @@ resource "aws_autoscaling_group" "app_asg_2nd" {
   desired_capacity    = 2
   vpc_zone_identifier = aws_subnet.private_subnet_2nd[*].id
 
+
   #Health check
   #Secondary Region
   health_check_type         = "ELB"
@@ -20,6 +21,7 @@ resource "aws_autoscaling_group" "app_asg_2nd" {
     version = "$Latest"
   }
 
+  depends_on      = [aws_lb_target_group.tg_london]
   enabled_metrics = ["GroupMinSize", "GroupMaxSize", "GroupDesiredCapacity", "GroupInServiceInstances", "GroupTotalInstances"]
 
   # Lifecycle hook for instance launching

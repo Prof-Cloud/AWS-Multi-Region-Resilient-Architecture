@@ -14,7 +14,7 @@ resource "aws_s3_bucket" "log_bucket2" {
 #Add a 30-second "Cool Down" period
 # This gives the AWS Global DNS time to realize the bucket exists in London
 resource "time_sleep" "wait_for_s3_propagation" {
-  depends_on = [aws_s3_bucket.log_bucket2]
+  depends_on      = [aws_s3_bucket.log_bucket2]
   create_duration = "30s"
 }
 
