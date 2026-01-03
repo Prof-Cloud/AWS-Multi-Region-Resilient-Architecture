@@ -62,7 +62,7 @@ resource "aws_lb_listener" "https_front_end_2nd" {
   #The default is to forward traffic to the secondary EC2 instsnces
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.tg_london.arn
+    target_group_arn = aws_lb_target_group.alb-tg_2nd.arn
   }
 }
 
