@@ -33,24 +33,34 @@ resource "aws_route53_record" "cert_validation" {
 
 #Health check for primary region
 resource "aws_route53_health_check" "primary" {
-  fqdn          = aws_lb.primary_alb.dns_name
-  port          = 443
-  type          = "HTTPS"
-  resource_path = "/health"
 
-  failure_threshold = 2
-  request_interval  = 10
+  # This is a "Calculated" check that combines the Host Count and Latency
+  type                   = "CALCULATED"
+  child_health_threshold = 2 # Both host count AND latency must be good
 
-  # This ensures the health check is monitored from multiple global locations
-  measure_latency = true
-
-  cloudwatch_alarm_region = "us-east-1"
-  cloudwatch_alarm_name   = "primary-health-check"
-  depends_on              = [aws_lb.primary_alb]
+  child_healthchecks = [
+    aws_route53_health_check.child_no_hosts.id,
+    aws_route53_health_check.child_high_latency.id
+  ]
 
   tags = {
     Name = "Primary Region Health Check"
   }
+}
+# Child Check 1: Monitors the 0 EC2 Alarm
+resource "aws_route53_health_check" "child_no_hosts" {
+  type                            = "CLOUDWATCH_METRIC"
+  cloudwatch_alarm_name           = aws_cloudwatch_metric_alarm.no_healthy_hosts.alarm_name
+  cloudwatch_alarm_region         = "us-east-1"
+  insufficient_data_health_status = "Unhealthy"
+}
+
+# Child Check 2: Monitors the Latency (2xx Warnings) Alarm
+resource "aws_route53_health_check" "child_high_latency" {
+  type                            = "CLOUDWATCH_METRIC"
+  cloudwatch_alarm_name           = aws_cloudwatch_metric_alarm.high_latency.alarm_name
+  cloudwatch_alarm_region         = "us-east-1"
+  insufficient_data_health_status = "Healthy"
 }
 
 
@@ -72,7 +82,7 @@ resource "aws_route53_record" "primary" {
     zone_id = aws_lb.primary_alb.zone_id
 
     #Want Route53 to listen to the 503 error not the ALB status
-    evaluate_target_health = false
+    evaluate_target_health = true
 
 
     #Wrong #Because when I delete the ec2 in virginia, the tg is emply, so the ALB will return a 503 error 
