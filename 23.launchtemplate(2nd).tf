@@ -13,11 +13,14 @@ resource "aws_launch_template" "app_template_2nd" {
 
   user_data = base64encode(templatefile("userdata_london.sh", {
 
-    db_endpoint = aws_rds_cluster.secondary_cluster.endpoint
+    # Global writer endpoint (automatically moves on failover)
+    db_endpoint = aws_rds_global_cluster.global_db.endpoint
     db_name     = aws_rds_global_cluster.global_db.database_name
     db_user     = aws_rds_cluster.primary_cluster.master_username
     db_password = aws_secretsmanager_secret_version.db_password_val.secret_string
   }))
+ 
+depends_on = [aws_nat_gateway.nat_2nd]
 
   lifecycle {
     create_before_destroy = true
