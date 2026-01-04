@@ -2,7 +2,7 @@
 #Secondary Region
 resource "aws_lb" "secondary_alb_2nd" {
   provider                   = aws.London
-  name                       = "secondary-tg"
+  name                       = "london-alb"
   internal                   = false
   load_balancer_type         = "application"
   security_groups            = [aws_security_group.alb_sg_2nd.id]
@@ -22,33 +22,9 @@ resource "aws_lb" "secondary_alb_2nd" {
   }
 }
 
-#Create health check for the Load balancer
-#Secondary Region
-resource "aws_lb_target_group" "alb-tg_2nd" {
-  provider    = aws.London
-  name        = "secondary-tg"
-  port        = 80
-  protocol    = "HTTP"
-  target_type = "instance"
-  vpc_id      = aws_vpc.secondary_vpc.id
-
-  #Critical for fast failover
-  deregistration_delay = 30 #default is 300 sec
-
-  health_check {
-    path                = "/health"
-    protocol            = "HTTP"
-    matcher             = "200"
-    interval            = 10
-    timeout             = 5
-    healthy_threshold   = 2
-    unhealthy_threshold = 2
-  }
-}
-
 #Create HTTPS Listerner for ALB 
 #This Listens traffic on Port 443 and forwards it to the secondary target group
-resource "aws_lb_listener" "https_front_end_2nd" {
+resource "aws_lb_listener" "https_2nd" {
   provider          = aws.London
   load_balancer_arn = aws_lb.secondary_alb_2nd.arn
   port              = 443
@@ -62,7 +38,7 @@ resource "aws_lb_listener" "https_front_end_2nd" {
   #The default is to forward traffic to the secondary EC2 instsnces
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.alb-tg_2nd.arn
+    target_group_arn = aws_lb_target_group.alb_tg_2nd.arn
   }
 }
 
@@ -85,6 +61,5 @@ resource "aws_lb_listener" "http_redirect_2nd" {
     }
 
   }
-  depends_on = [aws_acm_certificate_validation.cert_validation_2nd]
 }
 
