@@ -30,7 +30,7 @@ resource "aws_route53_record" "cert_validation" {
   allow_overwrite = true
 }
 
-
+#Primary Region Health Check 
 #Health check for primary region
 resource "aws_route53_health_check" "primary" {
 
@@ -47,6 +47,7 @@ resource "aws_route53_health_check" "primary" {
     Name = "Primary Region Health Check"
   }
 }
+
 # Child Check 1: Monitors the 0 EC2 Alarm
 resource "aws_route53_health_check" "child_no_hosts" {
   type                            = "CLOUDWATCH_METRIC"
@@ -64,15 +65,32 @@ resource "aws_route53_health_check" "child_high_latency" {
   type                            = "CLOUDWATCH_METRIC"
   cloudwatch_alarm_name           = aws_cloudwatch_metric_alarm.high_latency.alarm_name
   cloudwatch_alarm_region         = "us-east-1"
-  insufficient_data_health_status = "Healthy"
+  insufficient_data_health_status = "Unhealthy"
 
   tags = {
     Name = "Primary Region Health Check - Latency"
   }
 }
 
+#Secondary Region Health Check 
+#Health check for primary region
+resource "aws_route53_health_check" "secondary" {
+  # HTTP check against /health page of London ALB
+  type              = "HTTP"
+  port              = 80
+  resource_path     = "/health"
+  request_interval  = 30
+  failure_threshold = 3
 
-#Creating DNS record on Route53  - Primary
+  fqdn = aws_lb.secondary_alb_2nd.dns_name
+
+  tags = {
+    Name = "Secondary Region Health Check - London"
+  }
+}
+
+#Primary Region
+#Creating DNS record on Route53
 resource "aws_route53_record" "primary" {
   zone_id        = data.aws_route53_zone.hosted_zone.zone_id
   name           = var.domain_name
@@ -83,32 +101,33 @@ resource "aws_route53_record" "primary" {
     type = "PRIMARY"
   }
 
+  #Cloudwatch based health check, not ALB
   health_check_id = aws_route53_health_check.primary.id
 
   alias {
     name    = aws_lb.primary_alb.dns_name
     zone_id = aws_lb.primary_alb.zone_id
 
-    #Want Route53 to listen to the 503 error not the ALB status
-    evaluate_target_health = true
-
-
-    #Wrong #Because when I delete the ec2 in virginia, the tg is emply, so the ALB will return a 503 error 
-    #The ALB infrastrue is still healthly because "evaluate_target_health = true" is on #Route 53 talking to ALB, ALB is say Yes, I'am running 
-    #evaluate_target_health = true
+    # Must be false when using health_check_id
+    # ALB may report healthy even if TG has 0 instances
+    evaluate_target_health = false
   }
 }
 
-#Creating DNS record on Route53  - Secondary
+#Secondary Region
+#Creating DNS record on Route53 
 resource "aws_route53_record" "secondary" {
-  zone_id = data.aws_route53_zone.hosted_zone.zone_id
-  name    = var.domain_name
-  type    = "A"
-
+  zone_id        = data.aws_route53_zone.hosted_zone.zone_id
+  name           = var.domain_name
+  type           = "A"
   set_identifier = "secondary"
+
   failover_routing_policy {
     type = "SECONDARY"
   }
+
+  # Route53 will only send traffic here if health check passes
+  health_check_id = aws_route53_health_check.secondary.id
 
   alias {
     name                   = aws_lb.secondary_alb_2nd.dns_name
@@ -135,7 +154,7 @@ resource "aws_route53_record" "www_primary" {
     # This points 'www' to the 'primary' record logic above
     name                   = aws_lb.primary_alb.dns_name
     zone_id                = aws_lb.primary_alb.zone_id
-    evaluate_target_health = true
+    evaluate_target_health = false
   }
 }
 
@@ -150,10 +169,12 @@ resource "aws_route53_record" "www_secondary" {
     type = "SECONDARY"
   }
 
+  health_check_id = aws_route53_health_check.secondary.id
+
   alias {
     # This points 'www' to the 'primary' record logic above
     name                   = aws_lb.secondary_alb_2nd.dns_name
     zone_id                = aws_lb.secondary_alb_2nd.zone_id
-    evaluate_target_health = true
+    evaluate_target_health = false
   }
 }
