@@ -40,20 +40,13 @@ resource "aws_lb_listener" "https_front_end" {
 
 #Redirect HTTP to HTTPS
 #Ensure all users are redirected to secure HTTPS URL
-resource "aws_lb_listener" "http_redirect" {
+resource "aws_lb_listener" "http_primary" {
   load_balancer_arn = aws_lb.primary_alb.arn
   port              = 80
   protocol          = "HTTP"
 
-
-  #The default is to forward traffic to HTTPS
   default_action {
-    type = "redirect"
-    redirect {
-      protocol    = "HTTPS"
-      port        = "443"
-      status_code = "HTTP_301"
-    }
-
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.app_tg.arn
   }
 }
