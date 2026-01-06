@@ -7,8 +7,17 @@ resource "aws_launch_template" "app_template" {
   #Using existing Key Pair  
   key_name = "basicapp01"
 
-  vpc_security_group_ids = [aws_security_group.Linux_Server.id]
+  network_interfaces {
+    associate_public_ip_address = false # ASG is in private subnets
+    security_groups             = [aws_security_group.Linux_Server.id]
+  }
 
+# Added Metadata Options for IMDSv2 reliability
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 2
+  }
 
   user_data = base64encode(templatefile("userdata.sh", {
 
@@ -20,7 +29,9 @@ resource "aws_launch_template" "app_template" {
     db_name     = aws_rds_global_cluster.global_db.database_name
     db_user     = aws_rds_cluster.primary_cluster.master_username
     db_password = aws_secretsmanager_secret_version.db_password_val.secret_string
-  }))
+    }
+    )
+  )
 
 
   lifecycle {
