@@ -9,7 +9,17 @@ resource "aws_launch_template" "app_template_2nd" {
   #Using existing Key Pair  
   key_name = "mykeypaor"
 
-  vpc_security_group_ids = [aws_security_group.Linux_Server_2nd.id]
+  network_interfaces {
+    associate_public_ip_address = false
+    security_groups             = [aws_security_group.Linux_Server_2nd.id]
+  }
+
+# Added Metadata Options for IMDSv2 reliability
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 2
+  }
 
   user_data = base64encode(templatefile("userdata_london.sh", {
 
@@ -19,8 +29,8 @@ resource "aws_launch_template" "app_template_2nd" {
     db_user     = aws_rds_cluster.primary_cluster.master_username
     db_password = aws_secretsmanager_secret_version.db_password_val.secret_string
   }))
- 
-depends_on = [aws_nat_gateway.nat_2nd]
+
+  depends_on = [aws_nat_gateway.nat_2nd]
 
   lifecycle {
     create_before_destroy = true
