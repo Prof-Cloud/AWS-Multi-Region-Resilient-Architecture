@@ -126,9 +126,6 @@ resource "aws_route53_record" "secondary" {
     type = "SECONDARY"
   }
 
-  # Route53 will only send traffic here if health check passes
-  health_check_id = aws_route53_health_check.secondary.id
-
   alias {
     name                   = aws_lb.secondary_alb_2nd.dns_name
     zone_id                = aws_lb.secondary_alb_2nd.zone_id
