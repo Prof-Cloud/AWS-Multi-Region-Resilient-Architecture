@@ -32,10 +32,16 @@ resource "aws_lb_listener" "http_2nd" {
 
   # Direct forward for testing; no redirect to 443 yet
   default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.alb_tg_2nd.arn
+    type = "redirect"
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
   }
-}
+  }
+
+
 
 #Create HTTPS Listerner for ALB 
 #This Listens traffic on Port 443 and forwards it to the secondary target group
@@ -46,6 +52,8 @@ resource "aws_lb_listener" "https_2nd" {
   protocol          = "HTTPS"
   ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
   certificate_arn   = aws_acm_certificate.cert_2nd.arn
+
+  #Ensure the certificate is actually valid before creating the listener
   depends_on        = [aws_acm_certificate_validation.cert_validation_2nd]
 
   default_action {
