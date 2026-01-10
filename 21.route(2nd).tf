@@ -30,6 +30,9 @@ resource "aws_route" "private_nat_2nd" {
   route_table_id         = aws_route_table.private_2nd.id
   destination_cidr_block = "0.0.0.0/0"
   nat_gateway_id         = aws_nat_gateway.nat_2nd.id
+
+  # Ensure the London NAT Gateway is fully functional before creating the route
+  depends_on = [aws_nat_gateway.nat_2nd]
 }
 
 # Route table associations for public subnets

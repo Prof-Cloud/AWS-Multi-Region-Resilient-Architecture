@@ -14,9 +14,9 @@ resource "aws_lb_target_group" "app_tg" {
     path                = "/health"
     protocol            = "HTTP"
     matcher             = "200"
-    interval            = 10 # Faster interval for testing
+    interval            = 20 # Faster interval for testing
     timeout             = 5
-    healthy_threshold   = 2
+    healthy_threshold   = 2 
     unhealthy_threshold = 2
   }
   tags = {
