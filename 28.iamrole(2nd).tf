@@ -20,6 +20,25 @@ resource "aws_iam_role" "ec2_role_2nd" {
 
 }
 
+# IAM policy for the EC2 instances to communicate with AWS Services
+resource "aws_iam_role_policy" "ec2_asg_signal_2nd" {
+  name = "ec2_asg_signal_policy"
+  role = aws_iam_role.ec2_role_2nd.id 
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      #Permission for the Lifecycle Hook Signal
+      # This allows the instance to tell the ASG 'I am ready' at the end of userdata
+      {
+        Effect   = "Allow"
+        Action   = "autoscaling:CompleteLifecycleAction"
+        Resource = "*" # Or scope to your specific ASG ARNs
+      }
+    ]
+  })
+}
+
 #Attach the Managed Policy for Cloudwatch Logs
 #Allows ec2 to send metrics and logs to Cloudwatch
 resource "aws_iam_role_policy_attachment" "cloudwatch_logs_2nd" {
