@@ -11,15 +11,27 @@ dnf install -y httpd php php-fpm php-mysqli
 rm -f /var/www/html/index.html
 echo "OK" > /var/www/html/health
 
+# --- FIX START: Configure Apache to talk to PHP-FPM ---
+# This ensures Apache sends .php files to the PHP-FPM service
+cat <<EOF > /etc/httpd/conf.d/php-fpm.conf
+<FilesMatch \.php$>
+    SetHandler "proxy:unix:/run/php-fpm/www.sock|fcgi://localhost"
+</FilesMatch>
+
+<Location "/health">
+    SetHandler none
+    Require all granted
+</Location>
+EOF
+# --- FIX END ---
+
 # 3. Get Metadata (IMDSv2)
-# We fetch the token first, then use it to get the identity of the server
 TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
 AZ=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/availability-zone)
 REGION=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/region)
 INSTANCE_ID=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id)
 
 ## 4. Create App Page
-# The shell will replace $REGION, $AZ, and $INSTANCE_ID with real values
 cat <<EOF > /var/www/html/index.php
 <!DOCTYPE html>
 <html>
@@ -31,7 +43,6 @@ cat <<EOF > /var/www/html/index.php
     <hr>
     <h3>Database Status</h3>
 <?php
-// PHP variables are escaped with \ so the shell writes them literally
 \$host = "${db_endpoint}";
 \$user = "${db_user}";
 \$pass = "${db_password}";
@@ -54,5 +65,17 @@ EOF
 
 # 5. Set permissions and Start
 chown -R apache:apache /var/www/html
-systemctl enable --now php-fpm
-systemctl enable --now httpd
+# Start PHP-FPM first, then Apache
+systemctl enable php-fpm
+systemctl start php-fpm
+systemctl enable httpd
+systemctl start httpd
+
+# 6. SIGNAL: Complete the Lifecycle Hook
+# This moves the instance from Pending:Wait to InService
+aws autoscaling complete-lifecycle-action \
+    --lifecycle-hook-name await-userdata \
+    --auto-scaling-group-name ${asg_name} \
+    --lifecycle-action-result CONTINUE \
+    --instance-id $INSTANCE_ID \
+    --region $REGION
