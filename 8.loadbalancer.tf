@@ -31,6 +31,7 @@ resource "aws_lb_listener" "https_front_end" {
 
   # Wait for validation
   depends_on = [aws_acm_certificate_validation.cert_validation]
+
   #The default is to forward traffic to the primary EC2 instsnces
   default_action {
     type             = "forward"
@@ -46,7 +47,11 @@ resource "aws_lb_listener" "http_primary" {
   protocol          = "HTTP"
 
   default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.app_tg.arn
+    type = "redirect"
+
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301" # Permanent redirect
+    }
   }
-}

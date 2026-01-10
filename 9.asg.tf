@@ -1,14 +1,19 @@
 #Creates Auto Scaling 
 resource "aws_autoscaling_group" "app_asg" {
-  name_prefix         = "app_asg"
+
   min_size            = 3
   max_size            = 9
   desired_capacity    = 6
   vpc_zone_identifier = aws_subnet.private_subnet[*].id
 
+  #Set a specific name that matches the Launch Template variable
+  name                = "vanish-app-asg-primary"
+
   #Health check
   health_check_type         = "ELB"
-  health_check_grace_period = 300
+
+  #To get Lodon region live faster, reduce the grace period
+  health_check_grace_period = 40
   force_delete              = true
   target_group_arns         = [aws_lb_target_group.app_tg.arn]
 
@@ -21,21 +26,11 @@ resource "aws_autoscaling_group" "app_asg" {
 
   # Instance protection for launching
   initial_lifecycle_hook {
-    name                  = "instance-protection-launch"
-    lifecycle_transition  = "autoscaling:EC2_INSTANCE_LAUNCHING"
-    default_result        = "CONTINUE"
-    heartbeat_timeout     = 60
-    notification_metadata = "{\"key\":\"value\"}"
-  }
-
-  # Instance protection for terminating
-  initial_lifecycle_hook {
-    name                 = "scale-in-protection"
-    lifecycle_transition = "autoscaling:EC2_INSTANCE_TERMINATING"
+    name                 = "await-userdata"
     default_result       = "CONTINUE"
-    heartbeat_timeout    = 300
+    heartbeat_timeout    = 300 # Wait up to 5 mins for UserData to finish
+    lifecycle_transition = "autoscaling:EC2_INSTANCE_LAUNCHING"
   }
-
 }
 
 # Auto Scaling Policy
