@@ -30,3 +30,17 @@ output "global_db_id" {
   description = "The ID of the Aurora Global Database"
   value       = aws_rds_global_cluster.global_db.id
 }
+
+# AMI Outputs
+# To verify the specific Amazon Linux 2023 version used in Virginia
+output "primary_region_ami_id" {
+  description = "The ID of the AMI used in the primary region (Virginia)"
+  value       = data.aws_ami.linux_ami.id
+}
+
+
+# To verify the specific Amazon Linux 2023 version used in London
+output "secondary_region_ami_id" {
+  description = "The ID of the AMI used in the secondary region (London)"
+  value       = data.aws_ami.linux_ami_2nd.id
+}
