@@ -6,6 +6,8 @@ resource "aws_lb_target_group" "app_tg" {
   target_type = "instance"
   vpc_id      = aws_vpc.primary_vpc.id
 
+
+
   #Critical for fast failover
   deregistration_delay = 30 #default is 300 sec
 
@@ -14,9 +16,9 @@ resource "aws_lb_target_group" "app_tg" {
     path                = "/health"
     protocol            = "HTTP"
     matcher             = "200"
-    interval            = 20 # Faster interval for testing
-    timeout             = 5
-    healthy_threshold   = 2 
+    interval            = 5 # Faster interval for testing
+    timeout             = 2
+    healthy_threshold   = 2
     unhealthy_threshold = 2
   }
   tags = {
@@ -25,4 +27,5 @@ resource "aws_lb_target_group" "app_tg" {
   lifecycle {
     create_before_destroy = true
   }
+
 }
