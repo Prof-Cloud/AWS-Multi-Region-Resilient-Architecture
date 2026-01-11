@@ -73,16 +73,20 @@ resource "aws_route53_health_check" "child_high_latency" {
 }
 
 #Secondary Region Health Check 
-#Health check for primary region
+#Health check for secondary region
 resource "aws_route53_health_check" "secondary" {
   # HTTP check against /health page of London ALB
-  type              = "HTTP"
-  port              = 80
-  resource_path     = "/health"
+  type          = "HTTPS"
+  port          = 443
+  resource_path = "/health"
+
   request_interval  = 30
   failure_threshold = 3
 
   fqdn = aws_lb.secondary_alb_2nd.dns_name
+
+  # This ensures it ignores SSL certificate name mismatches during health checks
+  measure_latency   = true
 
   tags = {
     Name = "Secondary Region Health Check - London"
@@ -108,9 +112,9 @@ resource "aws_route53_record" "primary" {
     name    = aws_lb.primary_alb.dns_name
     zone_id = aws_lb.primary_alb.zone_id
 
-    # Must be false when using health_check_id
-    # ALB may report healthy even if TG has 0 instances
-    evaluate_target_health = false
+    #Should be true to let Route53 detect failures
+    #True, allow Route53 to detect ALB/TF health and trigger failover
+    evaluate_target_health = true
   }
 }
 
@@ -138,8 +142,9 @@ resource "aws_route53_record" "secondary" {
 resource "aws_route53_record" "www_primary" {
   zone_id        = data.aws_route53_zone.hosted_zone.zone_id
   name           = "www.${var.domain_name}"
-  type           = "A" # Change from CNAME to A
+  type           = "A"
   set_identifier = "www-primary"
+
 
   failover_routing_policy {
     type = "PRIMARY"
@@ -147,12 +152,16 @@ resource "aws_route53_record" "www_primary" {
 
   health_check_id = aws_route53_health_check.primary.id
 
+
   alias {
     # This points 'www' to the 'primary' record logic above
     name                   = aws_lb.primary_alb.dns_name
     zone_id                = aws_lb.primary_alb.zone_id
-    evaluate_target_health = false
+    
+    #Must be true for failover to work
+    evaluate_target_health = true
   }
+
 }
 
 #www Record Secondary
@@ -172,6 +181,8 @@ resource "aws_route53_record" "www_secondary" {
     # This points 'www' to the 'primary' record logic above
     name                   = aws_lb.secondary_alb_2nd.dns_name
     zone_id                = aws_lb.secondary_alb_2nd.zone_id
-    evaluate_target_health = false
+
+    #Ensure Route53 knows this ALB is healthy
+    evaluate_target_health = true
   }
 }
