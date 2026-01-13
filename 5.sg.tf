@@ -110,3 +110,4 @@ resource "aws_vpc_security_group_egress_rule" "allow_s3_logs" {
   from_port         = 443
   to_port           = 443
 }
+
