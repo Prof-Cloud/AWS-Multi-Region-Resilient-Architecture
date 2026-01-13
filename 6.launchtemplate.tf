@@ -12,7 +12,7 @@ resource "aws_launch_template" "app_template" {
     security_groups             = [aws_security_group.Linux_Server.id]
   }
 
-# Added Metadata Options for IMDSv2 reliability
+  # Added Metadata Options for IMDSv2 reliability
   metadata_options {
     http_endpoint               = "enabled"
     http_tokens                 = "required"
@@ -20,16 +20,18 @@ resource "aws_launch_template" "app_template" {
   }
 
   user_data = base64encode(templatefile("userdata.sh", {
-    db_endpoint = aws_rds_global_cluster.global_db.endpoint
+    db_endpoint = aws_rds_cluster.primary_cluster.endpoint
     db_name     = aws_rds_global_cluster.global_db.database_name
     db_user     = aws_rds_cluster.primary_cluster.master_username
     db_password = aws_secretsmanager_secret_version.db_password_val.secret_string
 
-    asg_name    = "vanish-app-asg-primary"
-}
-)
-)
+    asg_name = "vanish-app-asg-primary"
+    }
+    )
+  )
 
+# Ensure the DB writer is actually up before EC2s try to connect
+  depends_on = [aws_rds_cluster_instance.primary_instances]
 
   lifecycle {
     create_before_destroy = true
