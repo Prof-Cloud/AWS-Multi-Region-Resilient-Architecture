@@ -1,4 +1,4 @@
-#Cloudwatch - 0 EC2 alarm
+#0 EC2 CloudWatch Alarm
 #Watches the Primary Target Group and sounds the alarm if EC2s are deleted.
 resource "aws_cloudwatch_metric_alarm" "no_healthy_hosts" {
   alarm_name          = "primary-tg-no-hosts"
@@ -7,7 +7,7 @@ resource "aws_cloudwatch_metric_alarm" "no_healthy_hosts" {
   metric_name         = "HealthyHostCount"
   namespace           = "AWS/ApplicationELB"
   period              = "60"
-  statistic           = "Minimum"
+  statistic           = "Average"
   threshold           = "1" ## If it drops below 1, it's a fail
 
   dimensions = {
@@ -22,7 +22,7 @@ resource "aws_cloudwatch_metric_alarm" "no_healthy_hosts" {
   treat_missing_data = "breaching"
 }
 
-# Cloudwatch - High Latency Alarm
+#High Latency CloudWatch Alarm
 # This catches the 2xx warnings, site is up but responding too slowly
 resource "aws_cloudwatch_metric_alarm" "high_latency" {
   alarm_name          = "primary-high-latency"
@@ -34,16 +34,19 @@ resource "aws_cloudwatch_metric_alarm" "high_latency" {
   statistic           = "Average"
   threshold           = "2.0" # If it takes more than 2 seconds, it's a warning/fail
 
+  # This ensures the alarm clears when instances are gone
+  treat_missing_data  = "notBreaching"
+
   dimensions = {
     LoadBalancer = aws_lb.primary_alb.arn_suffix
   }
 
   alarm_description  = "Fails if the app is crawling (slow 2xx responses)"
-  treat_missing_data = "notBreaching"
+
 }
 
 
-# CLoudWatch - CPU Utilization Alarm
+#CPU Utilization CloudWatch Alarm
 #Montior CPU for ALB
 resource "aws_cloudwatch_metric_alarm" "ec2_cpu" {
   alarm_name          = "EC2_CPU_Utilization"
