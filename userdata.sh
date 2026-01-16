@@ -3,9 +3,9 @@
 # Vanish Global App - EC2 User Data Script
 ###############################################################################
 
-#------------------------------------------------------------------------------
+
 # Enable logging
-#------------------------------------------------------------------------------
+
 exec > >(tee /var/log/user-data.log | logger -t user-data -s 2>/dev/console) 2>&1
 set -eux
 
@@ -45,6 +45,10 @@ EOF
 ###############################################################################
 # 4. PHP-FPM socket configuration
 ###############################################################################
+
+# FIX ADDED: Ensure the directory exists so Apache doesn't get a 502 Error
+mkdir -p /run/php-fpm
+chown apache:apache /run/php-fpm
 
 sed -i 's|^listen = .*|listen = /run/php-fpm/www.sock|' /etc/php-fpm.d/www.conf
 sed -i 's|^;listen.owner = .*|listen.owner = apache|' /etc/php-fpm.d/www.conf
@@ -104,15 +108,17 @@ try {
     \$conn->options(MYSQLI_OPT_CONNECT_TIMEOUT, 5);
     \$conn->real_connect(\$host, \$user, \$pass, \$dbname);
 
-    \$result = \$conn->query("SELECT @@global.read_only AS is_read_only");
+    // UPDATED: Get Read-Only status AND the Server ID (Node Name)
+    \$result = \$conn->query("SELECT @@global.read_only AS is_read_only, @@aurora_server_id AS server_id");
     \$row = \$result->fetch_assoc();
 
     echo "<p style='color:green'>✅ Database Connected</p>";
+    echo "<p>Connected to Node: <b>" . \$row['server_id'] . "</b></p>";
 
     if (\$row['is_read_only'] == "1") {
-        echo "<p>Mode: <b>READ-ONLY</b></p>";
+        echo "<p>Status: <span style='color:orange'><b>SECONDARY REGION DATABASE </b></span></p>";
     } else {
-        echo "<p>Mode: <b>READ-WRITE</b></p>";
+        echo "<p>Status: <span style='color:blue'><b>PRIMARY REGION DATABASE </b></span></p>";
     }
 
     \$conn->close();
