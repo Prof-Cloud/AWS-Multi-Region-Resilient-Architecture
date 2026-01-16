@@ -40,7 +40,8 @@ resource "aws_iam_role_policy" "lambda_failover_policy" {
         Action = [
           "rds:FailoverGlobalCluster",
           "rds:DescribeDBClusters",
-          "rds:DescribeGlobalClusters"
+          "rds:DescribeGlobalClusters",
+          "rds:ModifyGlobalCluster"
         ]
         Resource = "*"
       },
@@ -72,14 +73,15 @@ resource "aws_lambda_function" "failover_logic" {
   handler       = "failover_lambda.lambda_handler"
   runtime       = "python3.12"
 
+
   #Failover can take time; 15 mins is the max allowed
   timeout = 900
 
   # Giving the Lambda the DB names to watch
   environment {
     variables = {
-      GLOBAL_CLUSTER_ID  = aws_rds_global_cluster.global_db.id
-      TARGET_CLUSTER_ARN = aws_rds_cluster.secondary_cluster.arn
+      GLOBAL_CLUSTER_ID = aws_rds_global_cluster.global_db.id
+      TARGET_CLUSTER_ID = aws_rds_cluster.secondary_cluster.cluster_identifier
     }
   }
 }
