@@ -42,6 +42,8 @@ Automated Database Failover (Cloudwatch -> SNS -> Lambda)
 - Uses "FailoverGlobalCluster" API to promote the London cluster
 - Logs all actions to Cloudwatch for visibility and troubleshooting
 
+
+
 SNS
 - Sends email alerts when a database failover is triggered
 - Notifies the developer when London becomes the new writer
