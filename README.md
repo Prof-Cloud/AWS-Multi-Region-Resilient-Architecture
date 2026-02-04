@@ -4,6 +4,8 @@ In this project, I built a highly available, multi-region disaster recovery (DR)
 
 Traffic is served from the primary region (us-east-1). If the primary region becomes unhealthy, Route53 automatically fails over traffic to the secondary region (eu-west-2) using a combination of health checks and CloudWatch alarms.
 
+This setup covers both the application layer and database layer, ensuring full end-to-end resilience. 
+
 
 <img width="761" height="853" alt="Screenshot 2026-02-03 at 4 15 53 PM" src="https://github.com/user-attachments/assets/e0844388-3ac1-4d69-81d5-43decfca643d" />
 
