@@ -21,6 +21,7 @@ VPC and Networking
   - Isolated database subnets for Aurora database clusters
   - VPC endpoints for S3, allowing private access without using the public internet
 
+
 Application Load Balancer (ALB)
 
   - One ALB per region
@@ -28,10 +29,12 @@ Application Load Balancer (ALB)
   - Route traffic to EC2 instances into Auto Scaling Groups
   - Designed to seamlessly accept traffic during regional failover
 
+
 Auto Scaling Groups (ASG)
 
   - EC2 instances running Amazon Linux 2023
   - PHP web application deployed via user data
+
 
 Aurora Global Database 
 
@@ -40,6 +43,7 @@ Aurora Global Database
 - Database credentials stored securely in AWS Secrets Manager
 - Storage encrypted using AWS KMS
 - Database deployed in isolated private subnets for security 
+
 
 Automated Database Failover (Cloudwatch -> SNS -> Lambda)
 
@@ -52,23 +56,34 @@ Automated Database Failover (Cloudwatch -> SNS -> Lambda)
 - All actions are logged to CloudWatch Logs for visibility and troubleshooting 
 
 
+SNS Notifications
 
-SNS
 - Sends email alerts when a database failover is triggered
-- Notifies the developer when London becomes the new writer
 - Real-time visibility into disaster recovery events
 
-Cloudwatch
+
+Cloudwatch Monitoring
+
+- Monitors ALB health, latency, and EC2 availability
+- Monitors Aurora replication health
+- Drives both application-level and database-level failover decisions
+- Centralized logging for EC2, Lambsa, and failover workflows
+
   
-DNS Failover Strategy
+DNS Failover Strategy (Route53)
 
 Route53 is configured with failover routing policies for both: 
   - The root domain
   - The www subdomain
 
-Each has:
+Each domain has:
   - A primary record pointing to the primary ALB
   - a secondary record pointing to the London ALB
 
-If the primary region becomes unhealthy, Route53 automatically sends traffic to the secondary region. 
+Failver is controlled by:
+  - Calculated health checks based on CloudWatch alarms
+  - ALB health and latency metrics
+
+If the primary region becomes unhealthy, Route53 automatically redirects traffic to the secondary region, ensuring minimal downtime and no manual DNS changes.
+
 
