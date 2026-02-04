@@ -1,6 +1,6 @@
 # AWS Multi-Region Disaster Recovery with Terraform and Aurora Global Database
 
-In this project, I built a highly available, multi-region disaster recovery (DR) setup on AWS with Terraform. The goal of this project is to keep the application available even when an entire AWS region goes down without any manual interventions. 
+In this project, I built a highly available, multi-region disaster recovery (DR) setup on AWS using Terraform. The goal of this project is to keep the application available even when an entire AWS region goes down without any manual interventions. 
 
 Traffic normally goes to the primary region (us-east-1). If something goes wrong, Route53 automatically failover the traffic to the secondary region (eu-west-2) use in health checks and CloudWatch alarms.
 
@@ -45,3 +45,15 @@ SNS
 
 Cloudwatch
   
+DNS Failover Strategy
+
+Route53 is configured with failover routing policies for both: 
+  - The root domain
+  - The www subdomain
+
+Each has:
+  - A primary record pointing to the primary ALB
+  - a secondary record pointing to the London ALB
+
+If the primary region becomes unhealthy, Route53 automatically sends traffic to the secondary region. 
+
