@@ -16,15 +16,15 @@ VPC and Networking
   - Primary VPC in us-east-1 (Virginia)
   - Secondary VPC in eu-west-2 (London)
   - Public subnets for ALBs
-  - Private subnets for EC2 application servers
-  - Isolated database subnets for Aurora clusters
-  - VPC endpoints for private S3 access without public internet
+  - Private subnets for EC2 
+  - Isolated database subnets for Aurora database clusters
+  - VPC endpoints for S3, allowing private access without using the public internet
 
 Application Load Balancer (ALB)
   - One ALB per region
-  - Health checks usings /health
-  - Route traffic to EC2 instances into Auto Scaling Groupss
-  - Designed to receive traffic during regional failover seamlessly
+  - Health checks using the /health endpoint
+  - Route traffic to EC2 instances into Auto Scaling Groups
+  - Designed to seamlessly accept traffic during regional failover
 
 Auto Scaling Groups (ASG)
   - EC2 instances running Amazon Linux 2023
