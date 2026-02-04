@@ -13,6 +13,7 @@ This setup covers both the application layer and database layer, ensuring full e
 ## What I Built
 
 VPC and Networking 
+
   - Primary VPC in us-east-1 (Virginia)
   - Secondary VPC in eu-west-2 (London)
   - Public subnets for ALBs
@@ -21,16 +22,19 @@ VPC and Networking
   - VPC endpoints for S3, allowing private access without using the public internet
 
 Application Load Balancer (ALB)
+
   - One ALB per region
   - Health checks using the /health endpoint
   - Route traffic to EC2 instances into Auto Scaling Groups
   - Designed to seamlessly accept traffic during regional failover
 
 Auto Scaling Groups (ASG)
+
   - EC2 instances running Amazon Linux 2023
   - PHP web application deployed via user data
 
-Aurora Global Database  
+Aurora Global Database 
+
 - Aurora Global Database spanning 2 regions, Virginia (writer) andLondon (reader)
 - Continuous low-latency replication across regions
 - Database credentials stored securely in AWS Secrets Manager
@@ -38,9 +42,14 @@ Aurora Global Database
 - Database deployed in isolated private subnets for security 
 
 Automated Database Failover (Cloudwatch -> SNS -> Lambda)
-- Triggered automatically when CloudWatch detects primary DB failure
-- Uses "FailoverGlobalCluster" API to promote the London cluster
-- Logs all actions to Cloudwatch for visibility and troubleshooting
+
+- Cloudwatch monitors Aurora replication lag on the primary cluster
+- If the primary writer DB becomes unavailable, a CloudWatch alarm triggers
+- SNS invokes a Lambda function that,
+  - Identifies the correct Aurora Global Cluster member
+  -   Promotes the London cluster to the writer using the  "FailoverGlobalCluster" API 
+  - Monitors the promotion processes until completion
+- All actions are logged to CloudWatch Logs for visibility and troubleshooting 
 
 
 
