@@ -28,4 +28,12 @@ Auto Scaling Groups (ASG)
 Aurora Global Database  
 - Aurora Global Database spans Virginia (writer) and London (reader)
 - Continuous low-latency replication across regions
-- Secrets stored securely in AWS Secrets Manager and replicated automatically 
+- Secrets stored securely in AWS Secrets Manager and replicated automatically
+
+Lambda
+- Triggered automatically when CloudWatch detects primary DB failure
+- Uses "FailoverGlobalCluster" API to promote the London cluster
+- Logs all actions to Cloudwatch for visibility and troubleshooting
+
+
+  
