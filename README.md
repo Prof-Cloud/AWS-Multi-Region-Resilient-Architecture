@@ -1,6 +1,9 @@
 # AWS Multi-Region Disaster Recovery with Terraform and Aurora Global Database
 
-In this project, I built a highly available, multi-region web application architecture on AWS that automatically survives regional failures. The application runs in 2 AWS regions and uses Aurora Global Database for data replication, Application Load Balancers and Auto Scaling Groups for compute resilience, and CloudWatch, SNS, Lambda to trigger automatic failover with the primary region goes down. 
+In this project, I built a highly available, multi-region disaster recovery (DR) setup on AWS with Terraform. The goal of this project is to keep the application available even when an entire AWS region goes down without any manual interventions. 
+
+Traffic normally goes to the primary region (us-east-1). If something goes wrong, Route53 automatically failover the traffic to the secondary region (eu-west-2) use in health checks and CloudWatch alarms.
+
 
 <img width="761" height="853" alt="Screenshot 2026-02-03 at 4 15 53 PM" src="https://github.com/user-attachments/assets/e0844388-3ac1-4d69-81d5-43decfca643d" />
 
