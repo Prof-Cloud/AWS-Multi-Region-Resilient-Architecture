@@ -31,11 +31,13 @@ Auto Scaling Groups (ASG)
   - PHP web application deployed via user data
 
 Aurora Global Database  
-- Aurora Global Database spans Virginia (writer) and London (reader)
+- Aurora Global Database spanning 2 regions, Virginia (writer) andLondon (reader)
 - Continuous low-latency replication across regions
-- Secrets stored securely in AWS Secrets Manager and replicated automatically
+- Database credentials stored securely in AWS Secrets Manager
+- Storage encrypted using AWS KMS
+- Database deployed in isolated private subnets for security 
 
-Lambda
+Automated Database Failover (Cloudwatch -> SNS -> Lambda)
 - Triggered automatically when CloudWatch detects primary DB failure
 - Uses "FailoverGlobalCluster" API to promote the London cluster
 - Logs all actions to Cloudwatch for visibility and troubleshooting
