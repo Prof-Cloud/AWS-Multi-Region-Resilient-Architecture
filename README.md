@@ -16,4 +16,16 @@ VPC and Networking
   - VPC endpoints for private S3 access without public internet
 
 Application Load Balancer (ALB)
+  - One ALB per region
+  - Health checks usings /health
+  - Route traffic to EC2 instances into Auto Scaling Groupss
+  - Designed to receive traffic during regional failover seamlessly
 
+Auto Scaling Groups (ASG)
+  - EC2 instances running Amazon Linux 2023
+  - PHP web application deployed via user data
+
+Aurora Global Database  
+- Aurora Global Database spans Virginia (writer) and London (reader)
+- Continuous low-latency replication across regions
+- Secrets stored securely in AWS Secrets Manager and replicated automatically 
